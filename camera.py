@@ -32,8 +32,9 @@ class Camera():
             return False
         
         for detection in results:
-            self.detections = get_xy_keypoint(detection)
-        
+            self.detections = get_xy_keypoint(detection, self.frame)
+            self.frame = detection.plot()
+
         return True
 
     def get_detection(self):
@@ -41,7 +42,7 @@ class Camera():
     
     def get_frame(self):
         # For some reasons the frames appeared inverted
-        # converted_frame = np.fliplr(self.frame)
+        converted_frame = np.fliplr(self.frame)
         converted_frame  = np.rot90(self.frame)
 
         # The video uses BGR colors and PyGame needs RGB
