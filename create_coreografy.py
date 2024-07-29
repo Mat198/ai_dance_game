@@ -49,20 +49,14 @@ while True:
 
     if keypoints:
         if save:
-            dance["pose_"+ str(count)] = keypoints
+            dance["move_" + str(count)] = {"time": 0.0, "pose": keypoints}
             count += 1
-            
         
         for key, value in keypoints.items():
             # print(key, ": ", value.x, ", ", value.y)
             frame = cv2.circle(frame, (value["x"],  value["y"]), 2, color=(0, 0, 255), thickness=-1)
             frame = cv2.putText(frame, display_time, (10,450), font, 3, (0, 255, 0), 2, cv2.LINE_AA)
 
-    # Criar o modo de adquirir as posturar para comparar
-    # Criar método de comparar a postura atual com a do jogo
-    # Mostrar pontuação na tela
-    # Subir no Git com vídeo
-    # Postar no Linkedinho
     cv2.imshow("LetsDance!", frame)
 
     key = cv2.waitKey(1)
