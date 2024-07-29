@@ -13,7 +13,7 @@ pygame.font.init() # text
 game_font = pygame.font.SysFont('Comic Sans MS', 30)
 
 # Loading the song 
-mixer.music.load("Los Del Rio - Macarena (Bayside Boys Remix).mp3") 
+mixer.music.load("media/Cartoon, Jéja - On & On (feat. Daniel Levi) [NCS Release].mp3") 
   
 # Setting the volume 
 mixer.music.set_volume(0.7) 
