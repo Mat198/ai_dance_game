@@ -32,7 +32,7 @@ class Camera():
             return False
         
         for detection in results:
-            self.detections = get_xy_keypoint(detection, self.frame)
+            self.detections = get_xy_keypoint(detection)
             self.frame = detection.plot()
 
         return True
