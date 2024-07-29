@@ -42,7 +42,7 @@ while True:
     save = False
     # Add image every 5 seconds
     if current_time >= 5.0:
-        cv2.imwrite(os.path.join(folder, "pose " + str(count) + ".jpg"), frame)
+        cv2.imwrite(os.path.join(folder, "move_" + str(count) + ".jpg"), frame)
         start_time = time.time()
         display_time = "POSE SAVED!"
         save = True
