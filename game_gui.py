@@ -4,7 +4,7 @@ from pygame.locals import *
 from pygame import mixer 
 
 from  camera import Camera
-from player import Player
+from coreografy import Coreografy
 
 # Init pygame engine
 pygame.init() # screen
@@ -31,7 +31,7 @@ fps_clock = pygame.time.Clock()
 
 # Defining screen propertys
 SCREEN_WIDTH = 1280
-SCREEN_HEIGHT = 720
+SCREEN_HEIGHT = 480
 display = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 display.fill(WHITE)
 pygame.display.set_caption("Let's Dance!")
@@ -40,10 +40,13 @@ game_camera = Camera();
 running = False
 
 # Initial game screen
-start_text = game_font.render("Let's Dance!\n Click to start!", False, (0, 0, 0))
+start_text = game_font.render("Let's Dance! Click to start!", False, (0, 0, 0))
 
-# Create player instance
-player = Player()
+dance = Coreografy()
+dance.load_coreografy()
+
+mixer.music.play()
+mixer.music.pause() 
 
 #Game loop begins
 while True:
@@ -57,14 +60,11 @@ while True:
         # Game starts on click
         if (not running)and (event.type == pygame.MOUSEBUTTONDOWN):
             print('Started game!')
-            # Start playing the song 
-            mixer.music.play()
+            # Start playing the song dance
             running = True
+            dance.start_coreografy()
+            mixer.music.unpause() 
     
-    # Game start text
-    if not running:
-        display.blit(start_text, (0,0))
-
     # Updates camera frame 
     success = game_camera.update()
     if not success:
@@ -77,7 +77,22 @@ while True:
     # Display current image
     display.blit(game_camera.get_frame(), (0, 0))
     
-    # Mostrar coreografia na tela e dar pontos
+    # Show coreografy on screen
+    if running:
+        display.blit(dance.get_coreografy_move_image(), (640, 0))
+        dance.update_dance(detections)
+    
+    # Game start text
+    if not running:
+        display.blit(start_text, (480,240))
+        
+    score_text = game_font.render("Score: " + dance.get_score(), False, (0, 0, 0))
+    display.blit(score_text, (0,0))
+
+    # Check for game end
+    if running and not pygame.mixer.music.get_busy():
+        running = False
+        print("Song is finshed")
 
     # Update the camera screen
     pygame.display.update()
