@@ -73,5 +73,5 @@ class Coreografy():
             + 100/(l_wrist_dist + 1)
             + 100/(r_wrist_dist + 1)) / 7.0
 
-        return score
+        return round(score)
     
