@@ -11,7 +11,11 @@ class Coreografy():
         self.current_move = 1
         self.start_time = time.time()
         self.score = 0
-
+        self.body_parts = (
+            "nose", "left_shoulder", "right_shoulder", 
+            "left_elbow", "right_elbow" , "left_wrist","right_wrist"
+        )
+ 
     def start_coreografy(self):
         self.score = 0
         self.start_time = time.time()
@@ -37,11 +41,43 @@ class Coreografy():
             print("Dance has " + str(key))
 
     def get_coreografy_move_image(self):
-        img = cv2.imread("coreografy/move_" + str(self.current_move)+ ".jpg")
-        rotated_img  = np.rot90(img)
-        result_frame = cv2.cvtColor(rotated_img, cv2.COLOR_BGR2RGB)
+        frame = cv2.imread("coreografy/move_" + str(self.current_move)+ ".jpg")
+        # Plot pose keypoints
+        keypoints = self.get_current_move()
+        
+        for part in self.body_parts:
+            frame = self.add_body_point(frame, keypoints[part])
+
+        frame = self.add_body_line(frame, keypoints["nose"], keypoints["left_shoulder"])
+        frame = self.add_body_line(frame, keypoints["nose"], keypoints["right_shoulder"])
+        frame = self.add_body_line(frame, keypoints["left_shoulder"], keypoints["left_elbow"])
+        frame = self.add_body_line(frame, keypoints["right_shoulder"], keypoints["right_elbow"])
+        frame = self.add_body_line(frame, keypoints["left_elbow"], keypoints["left_wrist"])
+        frame = self.add_body_line(frame, keypoints["right_elbow"], keypoints["right_wrist"])
+        
+        frame = np.rot90(frame)
+        result_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         surf = pygame.surfarray.make_surface(result_frame)
         return surf
+
+    def get_coordinate(self, body_part):
+        return (body_part["x"], body_part["y"])
+    
+    def add_body_point(self, frame, body_part):
+        frame = cv2.circle(
+            frame, 
+            self.get_coordinate(body_part), 
+            3, color=(0, 0, 255), thickness=2
+        )
+        return frame
+
+    def add_body_line(self, frame, part1, part2):
+        frame = cv2.line(
+            frame, 
+            self.get_coordinate(part1), self.get_coordinate(part2), 
+            (0, 255, 0), thickness=2
+        )
+        return frame
     
     def distance(self, p1, p2):
         distance = ((p1["x"] - p2["x"])**2 + (p1["y"] - p2["y"])**2)**(0.5)
@@ -55,23 +91,13 @@ class Coreografy():
             return 0
         move = self.get_current_move()
         # Only upper body. Webcam doesn't have enogh FoV and the room is kinda short :(
-        nose_dist = self.distance(player_pose["nose"], move["nose"])
-        l_sholder_dist = self.distance(player_pose["left_shoulder"],move["left_shoulder"])
-        r_sholder_dist = self.distance(player_pose["right_shoulder"],move["right_shoulder"])
-        l_elbow_dist = self.distance(player_pose["left_elbow"],move["left_elbow"])
-        r_elbow_dist = self.distance(player_pose["right_elbow"],move["right_elbow"])
-        l_elbow_dist = self.distance(player_pose["right_elbow"],move["right_elbow"])
-        l_wrist_dist = self.distance(player_pose["left_wrist"],move["left_wrist"])
-        r_wrist_dist = self.distance(player_pose["right_wrist"],move["right_wrist"])
+        score = 0
+        for part in self.body_parts:
+            distance = self.distance(player_pose[part], move[part])
+            # 0 distance = 100 score points
+            score += 100/(distance + 1) 
 
-        # 0 distance = 100 score points
-        score = (100/(nose_dist + 1) 
-            + 100/(l_sholder_dist + 1) 
-            + 100/(r_sholder_dist + 1) 
-            + 100/(l_elbow_dist + 1)
-            + 100/(r_elbow_dist + 1) 
-            + 100/(l_wrist_dist + 1)
-            + 100/(r_wrist_dist + 1)) / 7.0
-
+        score = score / len(self.body_parts)
+   
         return round(score)
     
