@@ -18,8 +18,8 @@ start_time = time.time()
 font = cv2.FONT_HERSHEY_SIMPLEX
 count = 0
 
-# Create folder to save coreografy
-folder = r'coreografy' 
+# Create folder to save choreography
+folder = r'choreography' 
 if not os.path.exists(folder):
     os.makedirs(folder)
 
@@ -65,7 +65,7 @@ while True:
         print("Escape hit, closing...")
         break
 
-with open(os.path.join('coreografy',"dance.json"), "a") as file:
+with open(os.path.join('choreography',"dance.json"), "a") as file:
     json.dump(dance, file)
     
 # Free camera resources
