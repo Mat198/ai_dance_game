@@ -4,10 +4,10 @@ import pygame
 import cv2
 import numpy as np
 
-class Coreografy():
+class Choreography():
     # Constructor
     def __init__(self):
-        self.coreografy = {}
+        self.choreography = {}
         self.current_move = 1
         self.start_time = time.time()
         self.score = 0
@@ -16,32 +16,32 @@ class Coreografy():
             "left_elbow", "right_elbow" , "left_wrist","right_wrist"
         )
  
-    def start_coreografy(self):
+    def start_choreography(self):
         self.score = 0
         self.start_time = time.time()
 
     def update_dance(self, player_pose):
-        change_time = self.coreografy["move_" + str(self.current_move)]["time"]
+        change_time = self.choreography["move_" + str(self.current_move)]["time"]
         if (time.time() - self.start_time) > change_time:
             self.score += self.calculate_player_score(player_pose)
             self.current_move += 1
             # Reset moves for simplicity
-            if self.current_move >= len(self.coreografy):
+            if self.current_move >= len(self.choreography):
                 self.current_move = 1
                 self.start_time = time.time()
 
     def get_score(self):
         return str(self.score)
     
-    def load_coreografy(self):
-        file = open('coreografy/dance.json')
-        self.coreografy = json.load(file)
-        print("Coreografy has " + str(len(self.coreografy)) + " moves!")
-        for key, value in self.coreografy.items():
+    def load_choreography(self):
+        file = open('choreography/dance.json')
+        self.choreography = json.load(file)
+        print("Choreography has " + str(len(self.choreography)) + " moves!")
+        for key, value in self.choreography.items():
             print("Dance has " + str(key))
 
-    def get_coreografy_move_image(self):
-        frame = cv2.imread("coreografy/move_" + str(self.current_move)+ ".jpg")
+    def get_choreography_move_image(self):
+        frame = cv2.imread("choreography/move_" + str(self.current_move)+ ".jpg")
         # Plot pose keypoints
         keypoints = self.get_current_move()
         
@@ -84,7 +84,7 @@ class Coreografy():
         return distance
     
     def get_current_move(self):
-        return self.coreografy["move_" + str(self.current_move)]["pose"]
+        return self.choreography["move_" + str(self.current_move)]["pose"]
 
     def calculate_player_score(self, player_pose):
         if not player_pose:

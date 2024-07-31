@@ -4,7 +4,7 @@ from pygame.locals import *
 from pygame import mixer 
 
 from  camera import Camera
-from coreografy import Coreografy
+from choreography import Choreography
 
 # Init pygame engine
 pygame.init() # screen
@@ -42,8 +42,8 @@ running = False
 # Initial game screen
 start_text = game_font.render("Let's Dance! Click to start!", False, (0, 0, 0))
 
-dance = Coreografy()
-dance.load_coreografy()
+dance = Choreography()
+dance.load_choreography()
 
 mixer.music.play()
 mixer.music.pause() 
@@ -62,7 +62,7 @@ while True:
             print('Started game!')
             # Start playing the song dance
             running = True
-            dance.start_coreografy()
+            dance.start_choreography()
             mixer.music.unpause() 
     
     # Updates camera frame 
@@ -77,9 +77,9 @@ while True:
     # Display current image
     display.blit(game_camera.get_frame(), (0, 0))
     
-    # Show coreografy on screen
+    # Show choreography on screen
     if running:
-        display.blit(dance.get_coreografy_move_image(), (640, 0))
+        display.blit(dance.get_choreography_move_image(), (640, 0))
         dance.update_dance(detections)
     
     # Game start text
