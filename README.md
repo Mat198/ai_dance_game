@@ -9,7 +9,7 @@ I'm happy with it because at least my girlfriend liked it. Hope someone else doe
 
 # Demo video
 
-https://github.com/user-attachments/assets/0da8712d-f2e4-4266-940a-a79a60a4f5b6
+https://github.com/user-attachments/assets/5d78917a-7d23-44e0-8a94-5fc282784caf
 
 # Test Song credits:
 Song: Cartoon, Jéja - On & On (feat. Daniel Levi) [NCS Release]
