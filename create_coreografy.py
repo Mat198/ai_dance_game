@@ -3,13 +3,12 @@ import cv2
 import time
 import json
 from ultralytics import YOLO
-from keypoints import get_xy_keypoint, Point
+from game.keypoints import get_xy_keypoint, Point
 
 model = YOLO('yolov8m-pose.pt')
 
 # Set camera as webcam
 cam = cv2.VideoCapture(0)
-
 
 cv2.namedWindow("LetsDance!")
 
