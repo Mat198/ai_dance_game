@@ -22,6 +22,12 @@ LEFT_KNEE:      int = 13
 RIGHT_KNEE:     int = 14
 LEFT_ANKLE:     int = 15
 RIGHT_ANKLE:    int = 16
+BODY_PARTS = (
+    "nose", "left_shoulder", "right_shoulder", 
+    "left_elbow", "right_elbow" , "left_wrist", "right_wrist"
+    "left_hip", "right_hip", "left_knee", 
+    "right_knee", "left_ankle", "right_ankle"
+)
 
 def extract_keypoint(keypoint: np.ndarray) -> dict[str, Point]:
     # nose
