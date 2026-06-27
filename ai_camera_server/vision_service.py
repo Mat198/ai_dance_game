@@ -52,6 +52,16 @@ def main():
     model = YOLO(args.weights)
 
     cam = cv2.VideoCapture(args.camera)
+    try:
+        cam = cv2.VideoCapture(args.camera, cv2.CAP_V4L2)
+    except Exception:
+        cam = cv2.VideoCapture(args.camera)
+    if not cam or not cam.isOpened():
+        return
+    cam.set(cv2.CAP_PROP_FOURCC, 'MJPG')
+    cam.set(cv2.CAP_PROP_FPS, 30)
+    cam.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+    cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
     if not cam.isOpened():
         raise SystemExit(f"Could not open camera index {args.camera}")
 
