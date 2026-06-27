@@ -15,6 +15,10 @@ const PANEL_H := 720.0
 const REF_W := 640.0
 const REF_H := 480.0
 
+# Joints below this detection confidence are hidden (e.g. legs out of frame, which
+# YOLO still guesses at a low-confidence random position).
+const CONF_THRESHOLD := 0.5
+
 const PLAYER_BG := Color(0.10, 0.12, 0.18)
 const REF_BG := Color(0.12, 0.10, 0.16)
 const PLAYER_COLOR := Color(0.25, 0.70, 1.00)
@@ -131,10 +135,15 @@ func _head_geometry(pose: Dictionary, mapper: Callable, width: float) -> Diction
 		return {"has": true, "center": mapper.call(pose["nose"]), "radius": radius}
 	return {"has": false, "center": Vector2.ZERO, "radius": 0.0}
 
-## A keypoint is "valid" if present and not at the origin (YOLO reports (0,0)
-## for joints it couldn't detect, e.g. legs out of webcam frame).
+## A keypoint is shown only if it's present, not at the origin (YOLO reports (0,0)
+## for undetected joints), and — when confidence is available — above the threshold.
+## Reference poses from dance.json have no "c" field and are always considered valid.
 func _valid(pose: Dictionary, part: String) -> bool:
 	if not pose.has(part):
 		return false
 	var p = pose[part]
-	return not (int(p["x"]) == 0 and int(p["y"]) == 0)
+	if int(p["x"]) == 0 and int(p["y"]) == 0:
+		return false
+	if p.has("c") and float(p["c"]) < CONF_THRESHOLD:
+		return false
+	return true

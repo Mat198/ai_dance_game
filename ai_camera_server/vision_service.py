@@ -10,9 +10,11 @@ Protocol (one UDP datagram per processed frame, "latest packet wins"):
     {
       "frame": <int>,                 # monotonically increasing frame counter
       "width": <int>, "height": <int>,# source frame size, for coordinate mapping
-      "keypoints": { "nose": {"x": int, "y": int}, ... } | null
+      "keypoints": { "nose": {"x": int, "y": int, "c": float}, ... } | null
     }
-`keypoints` is null when no player is detected.
+`keypoints` is null when no player is detected. `c` is the per-keypoint confidence
+in [0, 1], used by the client to hide joints the model only guessed at (e.g. legs
+out of frame).
 
 Run (from the repository root, with the virtualenv active):
     python -m ai_camera_server.vision_service --host 127.0.0.1 --port 5005 --camera 0
