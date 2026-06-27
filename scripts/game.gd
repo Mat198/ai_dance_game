@@ -7,13 +7,16 @@ extends Node2D
 const MUSIC_PATH := "res://media/Cartoon, Jéja - On & On (feat. Daniel Levi) [NCS Release].mp3"
 
 const COUNTDOWN_SECONDS := 3.0
+## All required players must be present this many consecutive frames before the
+## countdown starts (avoids false starts from a single flickery detection).
+const READY_FRAMES := 5
 ## Pause after this many consecutive frames with NO player detected.
 const MISSING_LIMIT := 10
 ## Testing cap: end the dance after this many seconds even if the song is longer.
 const MAX_DURATION := 30.0
 const PROGRESS_MARGIN := 12.0
 
-enum State { COUNTDOWN, PLAYING, PAUSED, ENDED }
+enum State { WAITING, COUNTDOWN, PLAYING, PAUSED, ENDED }
 
 var choreo: Choreography
 var audio: AudioStreamPlayer
@@ -22,8 +25,9 @@ var status_label: Label
 var progress_fill: ColorRect
 
 var player_count := 1
-var state := State.COUNTDOWN
+var state := State.WAITING
 var countdown := COUNTDOWN_SECONDS
+var ready_frames := 0
 var missing_frames := 0
 var current_index := -1
 
@@ -76,7 +80,7 @@ func _ready() -> void:
 	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 	status_label.add_theme_font_size_override("font_size", 96)
-	status_label.text = str(int(COUNTDOWN_SECONDS))
+	status_label.text = _waiting_text(0)
 	add_child(status_label)
 
 	_build_progress_bar()
@@ -144,9 +148,33 @@ func _start_playing() -> void:
 	status_label.visible = false
 	audio.play()
 
+## While WAITING: start the countdown once all required players have been present
+## for READY_FRAMES consecutive frames.
+func _update_waiting(detected: int) -> void:
+	status_label.text = _waiting_text(detected)
+	if detected >= player_count:
+		ready_frames += 1
+		if ready_frames >= READY_FRAMES:
+			_begin_countdown()
+	else:
+		ready_frames = 0
+
+func _begin_countdown() -> void:
+	state = State.COUNTDOWN
+	countdown = COUNTDOWN_SECONDS
+	status_label.text = str(int(COUNTDOWN_SECONDS))
+
+func _waiting_text(detected: int) -> String:
+	if player_count >= 2:
+		return "Waiting for players\n%d / %d ready" % [mini(detected, player_count), player_count]
+	return "Step into frame"
+
 ## Tracks presence, samples each player's match, and redraws on every frame.
 func _on_players_updated(players: Array, _width: int, _height: int) -> void:
 	overlay.queue_redraw()
+	if state == State.WAITING:
+		_update_waiting(players.size())
+		return
 	if players.is_empty():
 		missing_frames += 1
 		if missing_frames >= MISSING_LIMIT and state == State.PLAYING:

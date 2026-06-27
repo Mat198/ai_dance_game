@@ -38,8 +38,9 @@ Run the Python commands from the repository root (with your virtualenv active) s
    - Sanity-check the stream without Godot: `python test/udp_client.py`
 3. Open the project (this folder) in the Godot 4.x editor and press Play, or run
    `godot --path .` from the command line. Pick **1 Player** or **2 Players** (stand
-   side by side for two), get counted in, and dance! The round ends when the song
-   stops (capped at 30s for testing) and a winner is shown.
+   side by side for two). The game waits until everyone is in frame, counts you in,
+   then plays. The round ends when the song stops (capped at 30s for testing) and a
+   winner is shown.
 
 ## Choreography
 
