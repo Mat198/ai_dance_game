@@ -9,8 +9,8 @@ runtime.
 Images are processed in natural filename order. Each image becomes move_1, move_2,
 ... with a cumulative `time` of (n * --interval) seconds.
 
-Run:
-    python extract_poses.py --images pose_sources --interval 3.0
+Run (from the repository root, with the virtualenv active):
+    python -m choreography.extract_poses --images pose_sources --interval 3.0
 """
 
 import argparse

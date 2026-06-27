@@ -14,8 +14,8 @@ Protocol (one UDP datagram per processed frame, "latest packet wins"):
     }
 `keypoints` is null when no player is detected.
 
-Run:
-    python vision_service.py --host 127.0.0.1 --port 5005 --camera 0
+Run (from the repository root, with the virtualenv active):
+    python -m ai_camera_server.vision_service --host 127.0.0.1 --port 5005 --camera 0
 """
 
 import argparse
