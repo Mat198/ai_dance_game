@@ -18,6 +18,11 @@ const REF_H := 480.0
 # Joints below this detection confidence are hidden (e.g. legs out of frame, which
 # YOLO still guesses at a low-confidence random position).
 const CONF_THRESHOLD := 0.5
+# Hips are torso anchors: keep showing them at lower confidence (a cramped room
+# often pushes the live player's hips just under the strict threshold) so the
+# trunk doesn't collapse into a floating shoulder bar.
+const HIP_CONF_THRESHOLD := 0.2
+const HIP_PARTS := ["left_hip", "right_hip"]
 
 const PLAYER_BG := Color(0.10, 0.12, 0.18)
 const REF_BG := Color(0.12, 0.10, 0.16)
@@ -38,6 +43,13 @@ const LIMB_BONES := [
 	# legs
 	["left_hip", "left_knee"], ["left_knee", "left_ankle"],
 	["right_hip", "right_knee"], ["right_knee", "right_ankle"],
+]
+
+## Body joints (head is handled separately via the ears/nose).
+const JOINT_PARTS := [
+	"left_shoulder", "right_shoulder", "left_elbow", "right_elbow",
+	"left_wrist", "right_wrist", "left_hip", "right_hip",
+	"left_knee", "right_knee", "left_ankle", "right_ankle",
 ]
 
 var choreo: Choreography
@@ -62,14 +74,14 @@ func _draw_player(rect: Rect2) -> void:
 		return
 	# Mirror horizontally so it reads like a mirror.
 	var mapper := _make_mapper(sw, sh, rect, true)
-	_draw_figure(kp, mapper, PLAYER_COLOR)
+	_draw_figure(kp, mapper, PLAYER_COLOR, sh)
 
 func _draw_reference(rect: Rect2) -> void:
 	if choreo == null:
 		return
 	var pose := choreo.reference_pose(current_index)
 	var mapper := _make_mapper(REF_W, REF_H, rect, false)
-	_draw_figure(pose, mapper, REF_COLOR)
+	_draw_figure(pose, mapper, REF_COLOR, REF_H)
 
 ## Returns a Callable that maps a {"x","y"} keypoint in native (nw x nh) coordinates
 ## into `rect`, scaled uniformly and centred, optionally mirrored horizontally.
@@ -85,25 +97,45 @@ func _make_mapper(nw: float, nh: float, rect: Rect2, mirror: bool) -> Callable:
 			x = draw_w - x
 		return Vector2(off_x + x, off_y + float(p["y"]) * fit_scale)
 
-func _draw_figure(pose: Dictionary, mapper: Callable, color: Color) -> void:
+func _draw_figure(pose: Dictionary, mapper: Callable, color: Color, native_h: float) -> void:
 	var width := _limb_width(pose, mapper)
 	var outline := color.darkened(0.4)
 
+	# Resolve drawable joint positions (screen space) for valid detections.
+	var joints := {}
+	for part in JOINT_PARTS:
+		if _valid(pose, part):
+			joints[part] = mapper.call(pose[part])
+
+	# If a hip is missing, synthesize it straight below the shoulder near the
+	# bottom of the frame so the torso still reads as a body instead of collapsing.
+	_ensure_hip(joints, pose, mapper, native_h, "left_hip", "left_shoulder")
+	_ensure_hip(joints, pose, mapper, native_h, "right_hip", "right_shoulder")
+
 	# Limbs as capsules.
 	for bone in LIMB_BONES:
-		if _valid(pose, bone[0]) and _valid(pose, bone[1]):
-			_capsule(mapper.call(pose[bone[0]]), mapper.call(pose[bone[1]]), width, color)
+		if joints.has(bone[0]) and joints.has(bone[1]):
+			_capsule(joints[bone[0]], joints[bone[1]], width, color)
 
 	# Neck: connect the shoulders to the head so it doesn't float.
 	var head := _head_geometry(pose, mapper, width)
-	if head["has"] and _valid(pose, "left_shoulder") and _valid(pose, "right_shoulder"):
-		var shoulder_mid: Vector2 = (mapper.call(pose["left_shoulder"]) + mapper.call(pose["right_shoulder"])) * 0.5
+	if head["has"] and joints.has("left_shoulder") and joints.has("right_shoulder"):
+		var shoulder_mid: Vector2 = (joints["left_shoulder"] + joints["right_shoulder"]) * 0.5
 		_capsule(shoulder_mid, head["center"], width, color)
 
 	# Head: a circle proportional to the ear-to-ear distance.
 	if head["has"]:
 		draw_circle(head["center"], head["radius"] + maxf(3.0, width * 0.25), outline)
 		draw_circle(head["center"], head["radius"], color)
+
+## Fills in a missing hip joint by dropping a vertical line from the shoulder to
+## near the bottom of the frame (97% down, kept off the panel edge). Synthesized in
+## native coordinates so the mapper's mirroring keeps it directly under the shoulder.
+func _ensure_hip(joints: Dictionary, pose: Dictionary, mapper: Callable, native_h: float, hip: String, shoulder: String) -> void:
+	if joints.has(hip) or not joints.has(shoulder):
+		return
+	var shoulder_x := float(pose[shoulder]["x"])
+	joints[hip] = mapper.call({"x": shoulder_x, "y": native_h * 0.97})
 
 ## A capsule = thick line + a filled circle at each end (rounded caps / joints).
 func _capsule(a: Vector2, b: Vector2, width: float, color: Color) -> void:
@@ -144,6 +176,8 @@ func _valid(pose: Dictionary, part: String) -> bool:
 	var p = pose[part]
 	if int(p["x"]) == 0 and int(p["y"]) == 0:
 		return false
-	if p.has("c") and float(p["c"]) < CONF_THRESHOLD:
-		return false
+	if p.has("c"):
+		var threshold: float = HIP_CONF_THRESHOLD if part in HIP_PARTS else CONF_THRESHOLD
+		if float(p["c"]) < threshold:
+			return false
 	return true
