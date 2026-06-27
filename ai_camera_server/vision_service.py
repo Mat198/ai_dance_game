@@ -51,19 +51,20 @@ def main():
     print(f"Loading pose model from {args.weights} ...")
     model = YOLO(args.weights)
 
-    cam = cv2.VideoCapture(args.camera)
-    try:
-        cam = cv2.VideoCapture(args.camera, cv2.CAP_V4L2)
-    except Exception:
+    # Prefer the V4L2 backend on Linux for resolution/format control, falling back
+    # to the default backend if it isn't available.
+    cam = cv2.VideoCapture(args.camera, cv2.CAP_V4L2)
+    if not cam.isOpened():
         cam = cv2.VideoCapture(args.camera)
-    if not cam or not cam.isOpened():
-        return
-    cam.set(cv2.CAP_PROP_FOURCC, 'MJPG')
+    if not cam.isOpened():
+        raise SystemExit(f"Could not open camera index {args.camera}")
+
+    # Request the best resolution/format the webcam supports. FOURCC must be an
+    # integer code, not the raw string, or the format request is silently ignored.
+    cam.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
     cam.set(cv2.CAP_PROP_FPS, 30)
     cam.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
     cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
-    if not cam.isOpened():
-        raise SystemExit(f"Could not open camera index {args.camera}")
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     dest = (args.host, args.port)

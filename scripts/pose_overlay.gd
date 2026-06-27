@@ -1,16 +1,15 @@
 class_name PoseOverlay
 extends Node2D
-## Draws two skeletons on top of the gameplay scene:
-##   - left panel:  the live player pose (mirrored, selfie-style) from VisionClient
-##   - right panel: the reference pose for the current move, drawn from dance.json
+## Draws two stacked skeletons:
+##   - top panel:    the live player pose (mirrored, selfie-style) from VisionClient
+##   - bottom panel: the reference pose for the current move, from dance.json
 ##
-## The reference is rendered purely from the stored keypoints (no photo), so no
-## personal reference images need to live in the repo. The pose coordinates were
-## captured at 640x480, which is exactly the panel size, so they map 1:1.
+## Each pose is fit into its panel with a uniform scale (preserving aspect ratio)
+## and centred, so changing the webcam resolution never distorts the figure.
 
-const PANEL_W := 640.0
-const PANEL_H := 480.0
-# Resolution the reference poses were captured at (see create_coreografy.py).
+const PANEL_W := 1280.0
+const PANEL_H := 720.0
+# Resolution the reference poses were captured at (see create_choreography.py).
 const REF_W := 640.0
 const REF_H := 480.0
 
@@ -43,13 +42,15 @@ var choreo: Choreography
 var current_index := 0
 
 func _draw() -> void:
-	draw_rect(Rect2(0, 0, PANEL_W, PANEL_H), PLAYER_BG)
-	draw_rect(Rect2(PANEL_W, 0, PANEL_W, PANEL_H), REF_BG)
-	draw_line(Vector2(PANEL_W, 0), Vector2(PANEL_W, PANEL_H), Color(1, 1, 1, 0.25), 2.0)
-	_draw_player()
-	_draw_reference()
+	var player_rect := Rect2(0, 0, PANEL_W, PANEL_H)
+	var ref_rect := Rect2(0, PANEL_H, PANEL_W, PANEL_H)
+	draw_rect(player_rect, PLAYER_BG)
+	draw_rect(ref_rect, REF_BG)
+	draw_line(Vector2(0, PANEL_H), Vector2(PANEL_W, PANEL_H), Color(1, 1, 1, 0.25), 2.0)
+	_draw_player(player_rect)
+	_draw_reference(ref_rect)
 
-func _draw_player() -> void:
+func _draw_player(rect: Rect2) -> void:
 	var kp = VisionClient.keypoints
 	if kp == null:
 		return
@@ -57,30 +58,38 @@ func _draw_player() -> void:
 	var sh := float(VisionClient.source_height)
 	if sw <= 0.0 or sh <= 0.0:
 		return
-	var to_panel := func(p):
-		# Mirror horizontally so it reads like a mirror, map into the left panel.
-		var x := PANEL_W - (float(p["x"]) / sw * PANEL_W)
-		var y := float(p["y"]) / sh * PANEL_H
-		return Vector2(x, y)
-	_draw_skeleton(kp, to_panel, Color(0.2, 0.8, 1.0), Color(1, 1, 1))
+	# Mirror horizontally so it reads like a mirror.
+	var mapper := _make_mapper(sw, sh, rect, true)
+	_draw_skeleton(kp, mapper, Color(0.2, 0.8, 1.0), Color(1, 1, 1))
 
-func _draw_reference() -> void:
+func _draw_reference(rect: Rect2) -> void:
 	if choreo == null:
 		return
 	var pose := choreo.reference_pose(current_index)
-	var to_panel := func(p):
-		var x := PANEL_W + (float(p["x"]) / REF_W * PANEL_W)
-		var y := float(p["y"]) / REF_H * PANEL_H
-		return Vector2(x, y)
-	_draw_skeleton(pose, to_panel, Color(0.2, 1.0, 0.4), Color(0.9, 0.9, 0.3))
+	var mapper := _make_mapper(REF_W, REF_H, rect, false)
+	_draw_skeleton(pose, mapper, Color(0.2, 1.0, 0.4), Color(0.9, 0.9, 0.3))
 
-func _draw_skeleton(pose: Dictionary, to_panel: Callable, line_color: Color, point_color: Color) -> void:
+## Returns a Callable that maps a {"x","y"} keypoint in native (nw x nh) coordinates
+## into `rect`, scaled uniformly and centred, optionally mirrored horizontally.
+func _make_mapper(nw: float, nh: float, rect: Rect2, mirror: bool) -> Callable:
+	var fit_scale := minf(rect.size.x / nw, rect.size.y / nh)
+	var draw_w := nw * fit_scale
+	var draw_h := nh * fit_scale
+	var off_x := rect.position.x + (rect.size.x - draw_w) * 0.5
+	var off_y := rect.position.y + (rect.size.y - draw_h) * 0.5
+	return func(p):
+		var x := float(p["x"]) * fit_scale
+		if mirror:
+			x = draw_w - x
+		return Vector2(off_x + x, off_y + float(p["y"]) * fit_scale)
+
+func _draw_skeleton(pose: Dictionary, mapper: Callable, line_color: Color, point_color: Color) -> void:
 	for bone in BONES:
 		if _valid(pose, bone[0]) and _valid(pose, bone[1]):
-			draw_line(to_panel.call(pose[bone[0]]), to_panel.call(pose[bone[1]]), line_color, 3.0)
+			draw_line(mapper.call(pose[bone[0]]), mapper.call(pose[bone[1]]), line_color, 3.0)
 	for part in PARTS:
 		if _valid(pose, part):
-			draw_circle(to_panel.call(pose[part]), 5.0, point_color)
+			draw_circle(mapper.call(pose[part]), 5.0, point_color)
 
 ## A keypoint is "valid" if present and not at the origin (YOLO reports (0,0)
 ## for joints it couldn't detect, e.g. legs out of webcam frame).

@@ -4,8 +4,8 @@ extends Node2D
 ## skeletons, and pauses if the player leaves the camera's view.
 ## Replaces the pygame game loop in main.py.
 
-const PANEL_W := 640.0
-const PANEL_H := 480.0
+const PANEL_W := 1280.0
+const PANEL_H := 720.0
 const MUSIC_PATH := "res://media/Cartoon, Jéja - On & On (feat. Daniel Levi) [NCS Release].mp3"
 
 const COUNTDOWN_SECONDS := 3.0
@@ -40,26 +40,27 @@ func _ready() -> void:
 	add_child(overlay)
 	VisionClient.pose_updated.connect(_on_pose_updated)
 
-	# Score readout (left panel) and a label for the target pose (right panel).
+	# Score readout (top/player panel) and a label for the target pose (bottom panel).
 	score_label = Label.new()
 	score_label.position = Vector2(12, 8)
-	score_label.add_theme_font_size_override("font_size", 28)
+	score_label.add_theme_font_size_override("font_size", 32)
 	score_label.text = "Score: 0"
 	add_child(score_label)
 
 	var target_label := Label.new()
-	target_label.position = Vector2(PANEL_W + 12, 8)
-	target_label.add_theme_font_size_override("font_size", 28)
+	target_label.position = Vector2(12, PANEL_H + 8)
+	target_label.add_theme_font_size_override("font_size", 32)
 	target_label.text = "Match this!"
 	add_child(target_label)
 
-	# Big centred message used for the countdown and the "step back in" pause.
+	# Big centred message used for the countdown and the "step back in" pause,
+	# shown over the player (top) panel.
 	status_label = Label.new()
-	status_label.position = Vector2(0, 150)
+	status_label.position = Vector2(0, PANEL_H * 0.5 - 100.0)
 	status_label.size = Vector2(PANEL_W, 200)
 	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD
-	status_label.add_theme_font_size_override("font_size", 72)
+	status_label.add_theme_font_size_override("font_size", 96)
 	status_label.text = str(int(COUNTDOWN_SECONDS))
 	add_child(status_label)
 
