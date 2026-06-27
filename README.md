@@ -7,6 +7,37 @@ Current on version 0.1. It's just a proof of concept :D
 
 I'm happy with it because at least my girlfriend liked it. Hope someone else does too!
 
+# Godot version (in progress)
+
+The game is being migrated from pygame to a **Godot 4.x** front-end. Because Godot's
+`CameraServer` has no Linux/Windows desktop backend, webcam capture and YOLOv8 pose
+detection stay in Python and stream keypoints to Godot over UDP:
+
+```
+vision_service.py  ──(UDP keypoints JSON, port 5005)──▶  Godot client (scenes/scripts)
+  webcam + YOLOv8                                          menus, audio, scoring, rendering
+```
+
+## Running it
+
+1. Install Python deps: `pip install -r requirements.txt`
+2. Start the vision service (keep it running): `python vision_service.py`
+   - Debug preview: `python vision_service.py --show`
+   - Sanity-check the stream without Godot: `python test/udp_client.py`
+3. Open the project (this folder) in the Godot 4.x editor and press Play, or run
+   `godot --path .` from the command line.
+
+The legacy pygame version (`main.py`) still works and will be removed once the Godot
+client reaches feature parity.
+
+## Choreography
+
+The dance is stored entirely as keypoints in `choreography/dance.json`. The game draws
+the reference pose for each move as a skeleton from that data.To build a new choreography from your own pictures:
+
+1. Put your reference photos in a local `pose_sources/` folder (gitignored).
+2. Run `python extract_poses.py --images pose_sources --interval 3.0`.
+
 # Demo video
 
 https://github.com/user-attachments/assets/5d78917a-7d23-44e0-8a94-5fc282784caf
