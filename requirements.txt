@@ -1,0 +1,8 @@
+# Vision service (vision_service.py) + pose detection
+ultralytics>=8.0.0
+opencv-python>=4.8.0
+numpy>=1.24.0
+
+# Legacy pygame front-end (main.py) — kept until the Godot client reaches parity.
+# Not needed to run the headless vision service.
+pygame>=2.5.0
