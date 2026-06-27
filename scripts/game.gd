@@ -25,6 +25,10 @@ var countdown := COUNTDOWN_SECONDS
 var missing_frames := 0
 var current_index := -1
 var total_score := 0
+# Per-move accumulators: the move's score is the average match over its frames,
+# so a single noisy frame doesn't decide it.
+var move_score_sum := 0.0
+var move_score_samples := 0
 
 func _ready() -> void:
 	choreo = Choreography.new()
@@ -98,32 +102,44 @@ func _update_gameplay() -> void:
 	var elapsed := fmod(audio.get_playback_position(), span)
 	var idx := choreo.active_index(elapsed)
 	if idx != current_index:
-		if current_index >= 0:
-			total_score += choreo.score_pose(VisionClient.keypoints, current_index)
-			score_label.text = "Score: %d" % total_score
+		_finalize_move()
 		_set_move(idx)
 
 func _set_move(idx: int) -> void:
 	current_index = idx
+	move_score_sum = 0.0
+	move_score_samples = 0
 	overlay.current_index = idx
 	overlay.queue_redraw()
+
+## Add the just-finished move's averaged match score to the total.
+func _finalize_move() -> void:
+	if current_index >= 0 and move_score_samples > 0:
+		total_score += int(round(move_score_sum / move_score_samples))
+		score_label.text = "Score: %d" % total_score
 
 func _start_playing() -> void:
 	state = State.PLAYING
 	status_label.visible = false
 	audio.play()
 
-## Tracks player presence and redraws the skeletons on every received frame.
+## Tracks player presence, samples the match score, and redraws on every frame.
 func _on_pose_updated(keypoints, _width: int, _height: int) -> void:
 	overlay.queue_redraw()
 	if keypoints == null:
 		missing_frames += 1
 		if missing_frames >= MISSING_LIMIT and state == State.PLAYING:
 			_pause_for_detection()
-	else:
-		missing_frames = 0
-		if state == State.PAUSED:
-			_resume_after_detection()
+		return
+	missing_frames = 0
+	if state == State.PAUSED:
+		_resume_after_detection()
+	# Sample this frame's match into the current move's running average.
+	if state == State.PLAYING and current_index >= 0:
+		var s := choreo.score_pose(keypoints, current_index)
+		if s >= 0.0:
+			move_score_sum += s
+			move_score_samples += 1
 
 func _pause_for_detection() -> void:
 	state = State.PAUSED
@@ -140,8 +156,7 @@ func _on_song_finished() -> void:
 	if state == State.ENDED:
 		return
 	state = State.ENDED
-	# Score the final move before leaving.
-	if current_index >= 0:
-		total_score += choreo.score_pose(VisionClient.keypoints, current_index)
+	# Bank the final move's averaged score before leaving.
+	_finalize_move()
 	GameState.final_score = total_score
 	get_tree().change_scene_to_file("res://scenes/Results.tscn")
