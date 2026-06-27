@@ -44,12 +44,25 @@ Run the Python commands from the repository root (with your virtualenv active) s
 
 ## Choreography
 
-The dance is stored entirely as keypoints in `choreography/dance.json`. The game draws
-the reference pose for each move as a skeleton from that data, so no reference photos are
-kept in the repo. To build a new choreography from your own pictures:
+The choreography is a time-indexed list of pose keyframes that the game interpolates
+between, so the reference figure moves continuously (no photos or video ship — only
+keypoints). Two sources, loaded in this order:
 
-1. Put your reference photos in a local `pose_sources/` folder (gitignored).
-2. Run `python -m choreography.extract_poses --images pose_sources --interval 3.0`.
+- **`choreography/dance.csv`** (preferred) — a dense per-frame timeline recorded from a
+  dance video. One row per frame; time = row index / fps; metadata in the top comment.
+- **`choreography/dance.json`** (fallback) — the older sparse keyposes, interpolated.
+
+To build a timeline from a dance video (record to the same song so it stays in sync):
+
+1. Put the video in a local `pose_sources/` folder (gitignored).
+2. Run `python -m choreography.extract_video --video pose_sources/dance.mp4 --fps 15`.
+3. Commit the generated `choreography/dance.csv`. The video stays local.
+
+Players are scored on **limb orientation** against the best-matching reference pose within
+a small time window (±0.3 s), so reaction lag doesn't unfairly tank the score. The live
+score is a 0–100 match; in 2-player mode the higher average wins.
+
+(`extract_poses.py` still exists to build the sparse `dance.json` from still images.)
 
 # Demo video
 

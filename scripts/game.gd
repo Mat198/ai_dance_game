@@ -29,14 +29,13 @@ var state := State.WAITING
 var countdown := COUNTDOWN_SECONDS
 var ready_frames := 0
 var missing_frames := 0
-var current_index := -1
+var current_time := 0.0
 
-# Per-player scoring. A move's score is the average match over its frames, so a
-# single noisy frame doesn't decide it.
-var total_scores: Array = []   # int per player
-var move_sums: Array = []      # float per player, reset each move
-var move_samples: Array = []   # int per player, reset each move
-var score_labels: Array = []   # Label per player
+# Per-player live match: a running average of the (temporal-tolerant) match score,
+# shown as a 0-100 percentage. The winner is simply the higher average.
+var score_sum: Array = []     # float per player
+var score_count: Array = []   # int per player
+var score_labels: Array = []  # Label per player
 
 func _ready() -> void:
 	player_count = maxi(1, GameState.player_count)
@@ -48,16 +47,17 @@ func _ready() -> void:
 		return
 
 	overlay = PoseOverlay.new()
-	overlay.choreo = choreo
 	overlay.player_count = player_count
+	overlay.ref_width = choreo.ref_width
+	overlay.ref_height = choreo.ref_height
+	overlay.reference_pose = choreo.reference_pose_at(0.0)
 	add_child(overlay)
 	VisionClient.players_updated.connect(_on_players_updated)
 
-	# Per-player accumulators + score labels (over each player's panel).
+	# Per-player score accumulators + labels (over each player's panel).
 	for i in player_count:
-		total_scores.append(0)
-		move_sums.append(0.0)
-		move_samples.append(0)
+		score_sum.append(0.0)
+		score_count.append(0)
 		var lbl := Label.new()
 		lbl.position = _score_label_pos(i)
 		lbl.add_theme_font_size_override("font_size", 32)
@@ -92,9 +92,6 @@ func _ready() -> void:
 	audio.finished.connect(_end_game)
 	add_child(audio)
 
-	# Show the first reference pose during the countdown so players can prepare.
-	_set_move(0)
-
 func _process(delta: float) -> void:
 	match state:
 		State.COUNTDOWN:
@@ -116,32 +113,12 @@ func _update_gameplay() -> void:
 	if pos >= MAX_DURATION:
 		_end_game()
 		return
-	var span := choreo.total_time()
-	if span <= 0.0:
-		return
-	# Loop the choreography over the length of the song.
-	var elapsed := fmod(pos, span)
-	var idx := choreo.active_index(elapsed)
-	if idx != current_index:
-		_finalize_move()
-		_set_move(idx)
-
-func _set_move(idx: int) -> void:
-	current_index = idx
-	for i in player_count:
-		move_sums[i] = 0.0
-		move_samples[i] = 0
-	overlay.current_index = idx
+	# Loop the choreography over the length of the song, and show the interpolated
+	# reference pose for the current time.
+	var dur := choreo.duration()
+	current_time = fmod(pos, dur) if dur > 0.0 else pos
+	overlay.reference_pose = choreo.reference_pose_at(current_time)
 	overlay.queue_redraw()
-
-## Bank each player's averaged match for the just-finished move.
-func _finalize_move() -> void:
-	if current_index < 0:
-		return
-	for i in player_count:
-		if move_samples[i] > 0:
-			total_scores[i] += int(round(move_sums[i] / move_samples[i]))
-			score_labels[i].text = _score_text(i)
 
 func _start_playing() -> void:
 	state = State.PLAYING
@@ -183,13 +160,14 @@ func _on_players_updated(players: Array, _width: int, _height: int) -> void:
 	missing_frames = 0
 	if state == State.PAUSED:
 		_resume_after_detection()
-	if state == State.PLAYING and current_index >= 0:
+	if state == State.PLAYING:
 		for i in player_count:
 			if i < players.size() and players[i] != null:
-				var s := choreo.score_pose(players[i], current_index)
+				var s := choreo.score_at(players[i], current_time)
 				if s >= 0.0:
-					move_sums[i] += s
-					move_samples[i] += 1
+					score_sum[i] += s
+					score_count[i] += 1
+					score_labels[i].text = _score_text(i)
 
 func _pause_for_detection() -> void:
 	state = State.PAUSED
@@ -206,10 +184,11 @@ func _end_game() -> void:
 	if state == State.ENDED:
 		return
 	state = State.ENDED
-	# Bank the final move's averaged scores before leaving.
-	_finalize_move()
+	var finals := []
+	for i in player_count:
+		finals.append(_live_score(i))
 	GameState.player_count = player_count
-	GameState.scores = total_scores.duplicate()
+	GameState.scores = finals
 	get_tree().change_scene_to_file("res://scenes/Results.tscn")
 
 # --- progress bar ---------------------------------------------------------------
@@ -238,7 +217,13 @@ func _score_label_pos(i: int) -> Vector2:
 		return Vector2(PoseOverlay.WINDOW_W * 0.5 + 12.0, y)
 	return Vector2(12.0, y)
 
+## Running-average match (0-100) for player i so far.
+func _live_score(i: int) -> int:
+	if score_count[i] <= 0:
+		return 0
+	return int(round(score_sum[i] / score_count[i]))
+
 func _score_text(i: int) -> String:
 	if player_count >= 2:
-		return "P%d: %d" % [i + 1, total_scores[i]]
-	return "Score: %d" % total_scores[i]
+		return "P%d: %d" % [i + 1, _live_score(i)]
+	return "Score: %d" % _live_score(i)

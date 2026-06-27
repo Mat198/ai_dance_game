@@ -16,10 +16,6 @@ const TOP_MARGIN := 28.0
 # Player panels take the top half of the remaining space; the reference takes the rest.
 const PLAYER_ROW_H := (WINDOW_H - TOP_MARGIN) * 0.5
 
-# Resolution the reference poses were captured at (see create_choreography.py).
-const REF_W := 640.0
-const REF_H := 480.0
-
 # Joints below this detection confidence are hidden (e.g. legs out of frame, which
 # YOLO still guesses at a low-confidence random position).
 const CONF_THRESHOLD := 0.5
@@ -57,8 +53,11 @@ const JOINT_PARTS := [
 	"left_knee", "right_knee", "left_ankle", "right_ankle",
 ]
 
-var choreo: Choreography
-var current_index := 0
+## Set each frame by game.gd: the interpolated reference pose to draw, and the
+## resolution it was captured at (for undistorted fitting).
+var reference_pose: Dictionary = {}
+var ref_width := 640.0
+var ref_height := 480.0
 var player_count := 1
 
 func _draw() -> void:
@@ -83,10 +82,10 @@ func _draw() -> void:
 				var mapper := _make_mapper(sw, sh, rects[i], true)
 				_draw_figure(players[i], mapper, PLAYER_COLORS[i % PLAYER_COLORS.size()], sh)
 
-	# Shared reference pose.
-	if choreo != null:
-		var ref_mapper := _make_mapper(REF_W, REF_H, ref_rect, false)
-		_draw_figure(choreo.reference_pose(current_index), ref_mapper, REF_COLOR, REF_H)
+	# Shared reference pose (interpolated to the current playback time by game.gd).
+	if not reference_pose.is_empty():
+		var ref_mapper := _make_mapper(ref_width, ref_height, ref_rect, false)
+		_draw_figure(reference_pose, ref_mapper, REF_COLOR, ref_height)
 
 ## Rectangles for each player panel (1 = full width, 2 = side by side).
 func player_rects(count: int) -> Array:
