@@ -10,11 +10,12 @@ Protocol (one UDP datagram per processed frame, "latest packet wins"):
     {
       "frame": <int>,                 # monotonically increasing frame counter
       "width": <int>, "height": <int>,# source frame size, for coordinate mapping
-      "keypoints": { "nose": {"x": int, "y": int, "c": float}, ... } | null
+      "players": [ { "nose": {"x": int, "y": int, "c": float}, ... }, ... ]
     }
-`keypoints` is null when no player is detected. `c` is the per-keypoint confidence
-in [0, 1], used by the client to hide joints the model only guessed at (e.g. legs
-out of frame).
+`players` holds up to MAX_PLAYERS detected people, ordered left-to-right by their
+position in the image (empty when nobody is detected). `c` is the per-keypoint
+confidence in [0, 1], used by the client to hide joints the model only guessed at
+(e.g. legs out of frame).
 
 Run (from the repository root, with the virtualenv active):
     python -m ai_camera_server.vision_service --host 127.0.0.1 --port 5005 --camera 0
@@ -27,13 +28,14 @@ import socket
 import cv2
 from ultralytics import YOLO
 
-from game.keypoints import get_xy_keypoint
+from game.keypoints import get_players_keypoints
 
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 5005
 DEFAULT_CAMERA = 0
 DEFAULT_CONF = 0.6
 DEFAULT_WEIGHTS = "weights/yolov8m-pose.pt"
+MAX_PLAYERS = 2
 
 
 def parse_args():
@@ -85,10 +87,10 @@ def main():
             # stream=True returns a generator; conf filters low-confidence detections.
             results = model(source=frame, conf=args.conf, stream=True, verbose=False)
 
-            keypoints = None
+            players = []
             annotated = frame
             for detection in results:
-                keypoints = get_xy_keypoint(detection)
+                players = get_players_keypoints(detection, MAX_PLAYERS)
                 if args.show:
                     annotated = detection.plot()
 
@@ -96,7 +98,7 @@ def main():
                 "frame": frame_index,
                 "width": int(width),
                 "height": int(height),
-                "keypoints": keypoints,
+                "players": players,
             }
             sock.sendto(json.dumps(payload).encode("utf-8"), dest)
             frame_index += 1

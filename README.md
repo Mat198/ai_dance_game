@@ -37,7 +37,9 @@ Run the Python commands from the repository root (with your virtualenv active) s
    - Debug preview window: `python -m ai_camera_server.vision_service --show`
    - Sanity-check the stream without Godot: `python test/udp_client.py`
 3. Open the project (this folder) in the Godot 4.x editor and press Play, or run
-   `godot --path .` from the command line. Click **Start**, get counted in, and dance!
+   `godot --path .` from the command line. Pick **1 Player** or **2 Players** (stand
+   side by side for two), get counted in, and dance! The round ends when the song
+   stops (capped at 30s for testing) and a winner is shown.
 
 ## Choreography
 

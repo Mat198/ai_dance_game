@@ -1,16 +1,21 @@
 class_name PoseOverlay
 extends Node2D
-## Draws two stacked stick figures:
-##   - top panel:    the live player pose (mirrored, selfie-style) from VisionClient
-##   - bottom panel: the reference pose for the current move, from dance.json
+## Draws the live player(s) and the shared choreography as stick figures.
+##
+## Layout (top to bottom): a thin reserved strip for the progress bar, then one or
+## two player panels side by side, then the shared reference panel.
 ##
 ## Each figure is a circular head (sized from the ear-to-ear distance) plus capsule
-## limbs (thick segments with rounded joint caps). Poses are fit into their panel
-## with a uniform scale (preserving aspect ratio), so the webcam resolution and the
-## reference resolution can differ without distorting the figure.
+## limbs. Poses are fit into their panel with a uniform scale (preserving aspect
+## ratio), so webcam and reference resolutions can differ without distortion.
 
-const PANEL_W := 1280.0
-const PANEL_H := 720.0
+const WINDOW_W := 1280.0
+const WINDOW_H := 1440.0
+# Reserved strip at the top for the progress bar (drawn by game.gd).
+const TOP_MARGIN := 28.0
+# Player panels take the top half of the remaining space; the reference takes the rest.
+const PLAYER_ROW_H := (WINDOW_H - TOP_MARGIN) * 0.5
+
 # Resolution the reference poses were captured at (see create_choreography.py).
 const REF_W := 640.0
 const REF_H := 480.0
@@ -18,16 +23,16 @@ const REF_H := 480.0
 # Joints below this detection confidence are hidden (e.g. legs out of frame, which
 # YOLO still guesses at a low-confidence random position).
 const CONF_THRESHOLD := 0.5
-# Hips are torso anchors: keep showing them at lower confidence (a cramped room
-# often pushes the live player's hips just under the strict threshold) so the
-# trunk doesn't collapse into a floating shoulder bar.
+# Hips are torso anchors: keep showing them at lower confidence so the trunk
+# doesn't collapse into a floating shoulder bar.
 const HIP_CONF_THRESHOLD := 0.2
 const HIP_PARTS := ["left_hip", "right_hip"]
 
 const PLAYER_BG := Color(0.10, 0.12, 0.18)
 const REF_BG := Color(0.12, 0.10, 0.16)
-const PLAYER_COLOR := Color(0.25, 0.70, 1.00)
+const PLAYER_COLORS := [Color(0.25, 0.70, 1.00), Color(1.00, 0.55, 0.20)]
 const REF_COLOR := Color(0.30, 0.95, 0.50)
+const DIVIDER := Color(1, 1, 1, 0.25)
 
 ## Limb segments drawn as capsules. No head/face links and no fingers — the wrists
 ## and ankles are the ends of the chains.
@@ -54,34 +59,48 @@ const JOINT_PARTS := [
 
 var choreo: Choreography
 var current_index := 0
+var player_count := 1
 
 func _draw() -> void:
-	var player_rect := Rect2(0, 0, PANEL_W, PANEL_H)
-	var ref_rect := Rect2(0, PANEL_H, PANEL_W, PANEL_H)
-	draw_rect(player_rect, PLAYER_BG)
+	var rects := player_rects(player_count)
+	var ref_rect := reference_rect()
+	for r in rects:
+		draw_rect(r, PLAYER_BG)
 	draw_rect(ref_rect, REF_BG)
-	draw_line(Vector2(0, PANEL_H), Vector2(PANEL_W, PANEL_H), Color(1, 1, 1, 0.25), 2.0)
-	_draw_player(player_rect)
-	_draw_reference(ref_rect)
 
-func _draw_player(rect: Rect2) -> void:
-	var kp = VisionClient.keypoints
-	if kp == null:
-		return
+	# Divider between the two player panels, and between players and the reference.
+	if rects.size() == 2:
+		draw_line(Vector2(WINDOW_W * 0.5, TOP_MARGIN), Vector2(WINDOW_W * 0.5, TOP_MARGIN + PLAYER_ROW_H), DIVIDER, 2.0)
+	draw_line(Vector2(0, ref_rect.position.y), Vector2(WINDOW_W, ref_rect.position.y), DIVIDER, 2.0)
+
+	# Players (mirrored, selfie-style), each in its own panel.
+	var players: Array = VisionClient.players
 	var sw := float(VisionClient.source_width)
 	var sh := float(VisionClient.source_height)
-	if sw <= 0.0 or sh <= 0.0:
-		return
-	# Mirror horizontally so it reads like a mirror.
-	var mapper := _make_mapper(sw, sh, rect, true)
-	_draw_figure(kp, mapper, PLAYER_COLOR, sh)
+	if sw > 0.0 and sh > 0.0:
+		for i in rects.size():
+			if i < players.size() and players[i] != null:
+				var mapper := _make_mapper(sw, sh, rects[i], true)
+				_draw_figure(players[i], mapper, PLAYER_COLORS[i % PLAYER_COLORS.size()], sh)
 
-func _draw_reference(rect: Rect2) -> void:
-	if choreo == null:
-		return
-	var pose := choreo.reference_pose(current_index)
-	var mapper := _make_mapper(REF_W, REF_H, rect, false)
-	_draw_figure(pose, mapper, REF_COLOR, REF_H)
+	# Shared reference pose.
+	if choreo != null:
+		var ref_mapper := _make_mapper(REF_W, REF_H, ref_rect, false)
+		_draw_figure(choreo.reference_pose(current_index), ref_mapper, REF_COLOR, REF_H)
+
+## Rectangles for each player panel (1 = full width, 2 = side by side).
+func player_rects(count: int) -> Array:
+	if count >= 2:
+		var half := WINDOW_W * 0.5
+		return [
+			Rect2(0, TOP_MARGIN, half, PLAYER_ROW_H),
+			Rect2(half, TOP_MARGIN, half, PLAYER_ROW_H),
+		]
+	return [Rect2(0, TOP_MARGIN, WINDOW_W, PLAYER_ROW_H)]
+
+func reference_rect() -> Rect2:
+	var y := TOP_MARGIN + PLAYER_ROW_H
+	return Rect2(0, y, WINDOW_W, WINDOW_H - y)
 
 ## Returns a Callable that maps a {"x","y"} keypoint in native (nw x nh) coordinates
 ## into `rect`, scaled uniformly and centred, optionally mirrored horizontally.
@@ -129,8 +148,8 @@ func _draw_figure(pose: Dictionary, mapper: Callable, color: Color, native_h: fl
 		draw_circle(head["center"], head["radius"], color)
 
 ## Fills in a missing hip joint by dropping a vertical line from the shoulder to
-## near the bottom of the frame (97% down, kept off the panel edge). Synthesized in
-## native coordinates so the mapper's mirroring keeps it directly under the shoulder.
+## near the bottom of the frame (97% down). Synthesized in native coordinates so the
+## mapper's mirroring keeps it directly under the shoulder.
 func _ensure_hip(joints: Dictionary, pose: Dictionary, mapper: Callable, native_h: float, hip: String, shoulder: String) -> void:
 	if joints.has(hip) or not joints.has(shoulder):
 		return

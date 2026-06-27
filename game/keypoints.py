@@ -43,3 +43,40 @@ def get_xy_keypoint(results: Results) -> dict:
     if kp.conf is not None:
         conf = kp.conf.cpu().numpy()[0]
     return extract_keypoint(xy, conf)
+
+
+def _center_x(pose: dict) -> float:
+    """Horizontal centre of a pose, for ordering players left-to-right. Prefers the
+    shoulders, then the nose, then the mean of all detected joints."""
+    def used(name):
+        v = pose.get(name)
+        return v if v and not (v["x"] == 0 and v["y"] == 0) else None
+    shoulders = [used("left_shoulder"), used("right_shoulder")]
+    shoulders = [v for v in shoulders if v]
+    if shoulders:
+        return sum(v["x"] for v in shoulders) / len(shoulders)
+    nose = used("nose")
+    if nose:
+        return nose["x"]
+    xs = [v["x"] for v in pose.values() if not (v["x"] == 0 and v["y"] == 0)]
+    return sum(xs) / len(xs) if xs else 0.0
+
+
+def get_players_keypoints(results: Results, max_players: int = 2) -> list:
+    """Extract up to `max_players` people from a frame, ordered left-to-right by
+    their horizontal position in the image. Returns a list of keypoint dicts."""
+    kp = results.keypoints
+    if kp is None:
+        return []
+    xy_all = kp.xy.cpu().numpy()
+    if len(xy_all) == 0:
+        return []
+    conf_all = kp.conf.cpu().numpy() if kp.conf is not None else None
+    players = []
+    for i in range(len(xy_all)):
+        if len(xy_all[i]) == 0:
+            continue
+        conf = conf_all[i] if conf_all is not None else None
+        players.append(extract_keypoint(xy_all[i], conf))
+    players.sort(key=_center_x)
+    return players[:max_players]

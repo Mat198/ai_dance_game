@@ -34,12 +34,12 @@ def main():
             print("Received malformed packet")
             continue
 
-        kp = packet.get("keypoints")
-        if kp is None:
-            status = "no player"
+        players = packet.get("players", [])
+        if not players:
+            status = "no players"
         else:
-            nose = kp.get("nose", {})
-            status = f"player detected  nose=({nose.get('x')}, {nose.get('y')})  parts={len(kp)}"
+            noses = [f"({p.get('nose', {}).get('x')}, {p.get('nose', {}).get('y')})" for p in players]
+            status = f"{len(players)} player(s)  noses={', '.join(noses)}"
         print(f"frame {packet.get('frame'):>6}  {packet.get('width')}x{packet.get('height')}  {status}")
 
 

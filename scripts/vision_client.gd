@@ -1,20 +1,21 @@
 extends Node
 ## Autoload singleton. Receives keypoint datagrams from vision_service.py over UDP
-## and exposes the most recent player pose to the rest of the game.
+## and exposes the most recent detected players to the rest of the game.
 ##
 ## Webcam capture + YOLOv8 inference live in Python because Godot's CameraServer
 ## has no Linux/Windows desktop backend. This node is the bridge.
 
-signal pose_updated(keypoints: Variant, width: int, height: int)
+signal players_updated(players: Array, width: int, height: int)
 
 const BIND_HOST := "127.0.0.1"
 const BIND_PORT := 5005
 
 var _udp := PacketPeerUDP.new()
 
-## Dictionary of {part_name: {"x": float, "y": float}} for the latest frame, or null
-## when no player was detected.
-var keypoints: Variant = null
+## Up to MAX_PLAYERS pose dicts for the latest frame, ordered left-to-right by
+## image position. Empty when nobody is detected. Each entry is
+## {part_name: {"x": float, "y": float, "c": float}}.
+var players: Array = []
 var source_width: int = 0
 var source_height: int = 0
 var receiving: bool = false
@@ -46,6 +47,7 @@ func _process(_delta: float) -> void:
 
 	source_width = int(data.get("width", 0))
 	source_height = int(data.get("height", 0))
-	keypoints = data.get("keypoints", null)
+	var incoming = data.get("players", [])
+	players = incoming if typeof(incoming) == TYPE_ARRAY else []
 	receiving = true
-	pose_updated.emit(keypoints, source_width, source_height)
+	players_updated.emit(players, source_width, source_height)

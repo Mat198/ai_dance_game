@@ -1,4 +1,6 @@
 extends Node
-## Autoload singleton holding state that survives scene changes (Game -> Results).
+## Autoload singleton holding state that survives scene changes (Menu -> Game -> Results).
 
-var final_score: int = 0
+var player_count: int = 1
+## Per-player final totals, set by the Game scene and read by the Results scene.
+var scores: Array = []
