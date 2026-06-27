@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+
+# Personal reference photos — choreography is stored as keypoints in dance.json,
+# so the source images never need to be committed.
+pose_sources/
+choreography/*.jpg
+choreography/*.jpeg
+choreography/*.png
+
+# Godot editor cache / exports
+.godot/
+export_presets.cfg
+.vscode
+.claude
+ai_dance_game
