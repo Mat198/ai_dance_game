@@ -47,11 +47,23 @@ var ref_height := 480.0
 ## Song this choreography was recorded to (res:// path), or "" to use the default.
 var song_path := ""
 
+## Load a specific timeline/keypose file (res:// path). Used when the player picks
+## a recorded choreography on the song-select screen.
+func load_path(path: String) -> bool:
+	if path == "":
+		return false
+	if path.ends_with(".csv"):
+		return _load_csv(path)
+	if path.ends_with(".json"):
+		return _load_json(path)
+	return false
+
+## Default fallback: the sample dance.csv if present, else dance.json.
 func load_dance() -> bool:
-	if FileAccess.file_exists(TIMELINE_CSV) and _load_csv():
+	if FileAccess.file_exists(TIMELINE_CSV) and _load_csv(TIMELINE_CSV):
 		print("Choreography: loaded %d frames from dance.csv" % keyframes.size())
 		return true
-	if _load_json():
+	if _load_json(DANCE_JSON):
 		print("Choreography: loaded %d keyposes from dance.json" % keyframes.size())
 		return true
 	push_error("Choreography: no dance.csv or dance.json could be loaded")
@@ -93,10 +105,11 @@ func score_at(player: Variant, t: float) -> float:
 
 # --- loading --------------------------------------------------------------------
 
-func _load_csv() -> bool:
-	var f := FileAccess.open(TIMELINE_CSV, FileAccess.READ)
+func _load_csv(path: String) -> bool:
+	var f := FileAccess.open(path, FileAccess.READ)
 	if f == null:
 		return false
+	keyframes.clear()
 	# Parsed manually (not get_csv_line) so a song path containing commas survives
 	# in the metadata comment lines; data rows have no commas in their fields.
 	var fps := 15.0
@@ -144,10 +157,11 @@ func _row_to_pose(cells: PackedStringArray) -> Dictionary:
 		}
 	return pose
 
-func _load_json() -> bool:
-	var f := FileAccess.open(DANCE_JSON, FileAccess.READ)
+func _load_json(path: String) -> bool:
+	var f := FileAccess.open(path, FileAccess.READ)
 	if f == null:
 		return false
+	keyframes.clear()
 	var json := JSON.new()
 	if json.parse(f.get_as_text()) != OK:
 		return false

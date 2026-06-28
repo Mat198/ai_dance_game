@@ -43,7 +43,7 @@ func _ready() -> void:
 
 func _start(count: int) -> void:
 	GameState.player_count = count
-	get_tree().change_scene_to_file("res://scenes/Game.tscn")
+	get_tree().change_scene_to_file("res://scenes/SongSelect.tscn")
 
 func _open_recorder() -> void:
 	get_tree().change_scene_to_file("res://scenes/Record.tscn")

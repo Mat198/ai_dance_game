@@ -7,7 +7,7 @@ extends Node2D
 const WINDOW_W := 1280.0
 const WINDOW_H := 1440.0
 const SONGS_DIR := "res://songs"
-const OUTPUT_CSV := "res://choreography/dance.csv"
+const CHOREO_DIR := "res://choreography"
 
 const RECORD_FPS := 15.0
 const RECORD_SECONDS := 30.0      # testing cap; Stop ends it early
@@ -78,7 +78,7 @@ func _process(delta: float) -> void:
 
 # --- phase + buttons ------------------------------------------------------------
 
-func _set_phase(p: int) -> void:
+func _set_phase(p: Phase) -> void:
 	phase = p
 	hover_id = ""
 	hold_timer = 0.0
@@ -188,17 +188,22 @@ func _finish_recording() -> void:
 	if phase != Phase.RECORDING:
 		return
 	audio.stop()
-	var ok := _save_csv()
-	status_text = ("Saved %d frames!" % frames.size()) if ok else "Save failed"
+	var path := _save_csv()
+	status_text = ("Saved %s (%d frames)!" % [path.get_file(), frames.size()]) if path != "" else "Save failed"
 	_set_phase(Phase.SAVED)
 
-func _save_csv() -> bool:
+## Saves to choreography/<song-slug>_N.csv, picking the next free index for the song.
+func _save_csv() -> String:
 	if frames.is_empty():
-		return false
-	var f := FileAccess.open(OUTPUT_CSV, FileAccess.WRITE)
+		return ""
+	var slug := _slugify(str(songs[selected]["name"]))
+	if slug == "":
+		slug = "dance"
+	var path := _next_output_path(slug)
+	var f := FileAccess.open(path, FileAccess.WRITE)
 	if f == null:
-		push_error("Recorder: cannot write %s" % OUTPUT_CSV)
-		return false
+		push_error("Recorder: cannot write %s" % path)
+		return ""
 	var w := rec_width if rec_width > 0 else 1280
 	var h := rec_height if rec_height > 0 else 720
 	f.store_line("# fps=%.2f width=%d height=%d" % [RECORD_FPS, w, h])
@@ -223,7 +228,32 @@ func _save_csv() -> bool:
 				row.append("0")
 		f.store_line(",".join(row))
 	f.close()
-	return true
+	return path
+
+## Lowercase-safe slug: keep alphanumerics, turn everything else into single "_".
+func _slugify(text: String) -> String:
+	var out := ""
+	for ch in text:
+		if (ch >= "a" and ch <= "z") or (ch >= "A" and ch <= "Z") or (ch >= "0" and ch <= "9"):
+			out += ch
+		else:
+			out += "_"
+	while out.find("__") != -1:
+		out = out.replace("__", "_")
+	return out.strip_edges().trim_prefix("_").trim_suffix("_")
+
+## choreography/<slug>_N.csv with N one past the highest existing index for the slug.
+func _next_output_path(slug: String) -> String:
+	var highest := 0
+	var dir := DirAccess.open(CHOREO_DIR)
+	if dir:
+		var prefix := slug + "_"
+		for f in dir.get_files():
+			if f.begins_with(prefix) and f.ends_with(".csv"):
+				var mid := f.substr(prefix.length(), f.length() - prefix.length() - 4)
+				if mid.is_valid_int():
+					highest = maxi(highest, int(mid))
+	return "%s/%s_%d.csv" % [CHOREO_DIR, slug, highest + 1]
 
 # --- hand cursor / mapping ------------------------------------------------------
 
@@ -237,10 +267,10 @@ func _player_pose():
 	return players[0]
 
 ## Map a keypoint into full-screen coords (mirrored), or null if not visible.
-func _map_part(pose, name: String):
-	if pose == null or not pose.has(name):
+func _map_part(pose, part: String):
+	if pose == null or not pose.has(part):
 		return null
-	var p = pose[name]
+	var p = pose[part]
 	if int(p["x"]) == 0 and int(p["y"]) == 0:
 		return null
 	if p.has("c") and float(p["c"]) < CURSOR_CONF:

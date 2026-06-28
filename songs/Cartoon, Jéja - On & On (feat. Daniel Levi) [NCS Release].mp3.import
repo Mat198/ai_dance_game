@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://bvrbryferp84r"
+path="res://.godot/imported/Cartoon, Jéja - On & On (feat. Daniel Levi) [NCS Release].mp3-c79d9fd5d03c834aaf12bb1c020ac3ef.mp3str"
+
+[deps]
+
+source_file="res://songs/Cartoon, Jéja - On & On (feat. Daniel Levi) [NCS Release].mp3"
+dest_files=["res://.godot/imported/Cartoon, Jéja - On & On (feat. Daniel Levi) [NCS Release].mp3-c79d9fd5d03c834aaf12bb1c020ac3ef.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

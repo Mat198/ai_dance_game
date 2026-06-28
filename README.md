@@ -39,9 +39,9 @@ Run the Python commands from the repository root (with your virtualenv active) s
    - Sanity-check the stream without Godot: `python test/udp_client.py`
 3. Open the project (this folder) in the Godot 4.x editor and press Play, or run
    `godot --path .` from the command line. Pick **1 Player** or **2 Players** (stand
-   side by side for two). The game waits until everyone is in frame, counts you in,
-   then plays. The round ends when the song stops (capped at 30s for testing) and a
-   winner is shown.
+   side by side for two), then **choose a choreography** to dance to. The game waits
+   until everyone is in frame, counts you in, then plays the choreography's song. The
+   round ends when the song stops (capped at 30s for testing) and a winner is shown.
 
    Or pick **Record Choreography** to author a dance live (see below).
 
@@ -61,8 +61,10 @@ the right track; otherwise it falls back to the default song. There are two ways
 **Record it live in-game (easiest).** Drop `.mp3` files into `songs/`, then on the menu
 choose **Record Choreography**. Your **right hand is the cursor** — rest it on a button
 (on the right edge, far from the centre) for a moment to activate. Pick a song, press
-**Play**, get counted in, and dance; your pose is recorded and saved to
-`choreography/dance.csv` synced to that song.
+**Play**, get counted in, and dance; your pose is saved to
+`choreography/<song-name>_N.csv` (auto-numbered per song, e.g. `My_Song_1.csv`,
+`My_Song_2.csv`) synced to that song. All recorded `.csv`s show up on the song-select
+screen when you start a game.
 
 **Extract from a video (offline).**
 1. Put the video in a local `pose_sources/` folder (gitignored).

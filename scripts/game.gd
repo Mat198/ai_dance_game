@@ -41,7 +41,12 @@ func _ready() -> void:
 	player_count = maxi(1, GameState.player_count)
 
 	choreo = Choreography.new()
-	if not choreo.load_dance():
+	var loaded := false
+	if GameState.choreography_path != "":
+		loaded = choreo.load_path(GameState.choreography_path)
+	if not loaded:
+		loaded = choreo.load_dance()
+	if not loaded:
 		push_error("Game: failed to load choreography; returning to menu")
 		get_tree().change_scene_to_file("res://scenes/Menu.tscn")
 		return
