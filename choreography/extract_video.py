@@ -41,6 +41,7 @@ def parse_args():
     p.add_argument("--fps", type=float, default=DEFAULT_FPS, help="Target timeline frames per second")
     p.add_argument("--conf", type=float, default=DEFAULT_CONF, help="YOLO confidence threshold")
     p.add_argument("--smooth", type=int, default=DEFAULT_SMOOTH, help="Moving-average window in frames")
+    p.add_argument("--song", default="", help="Song res:// path to record in the timeline (e.g. res://songs/foo.mp3)")
     return p.parse_args()
 
 
@@ -69,10 +70,12 @@ def smooth_frames(frames, window):
     return out
 
 
-def write_csv(path, fps, width, height, frames):
+def write_csv(path, fps, width, height, frames, song=""):
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     with open(path, "w", newline="") as fh:
         fh.write(f"# fps={fps:.2f} width={width} height={height}\n")
+        if song:
+            fh.write(f"# song={song}\n")
         writer = csv.writer(fh)
         header = []
         for name in KEYPOINT_NAMES:
@@ -128,7 +131,7 @@ def main():
         raise SystemExit("No poses detected in the video; nothing written.")
 
     frames = smooth_frames(frames, args.smooth)
-    write_csv(args.output, out_fps, width, height, frames)
+    write_csv(args.output, out_fps, width, height, frames, args.song)
     print(f"Wrote {len(frames)} frames @ {out_fps:.2f} fps ({width}x{height}) to {args.output}")
 
 

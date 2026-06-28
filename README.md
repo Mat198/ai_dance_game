@@ -22,10 +22,11 @@ ai_camera_server/vision_service.py  ──(UDP keypoints, :5005)──▶  Godot
 
 - `ai_camera_server/` — headless Python vision service (webcam + YOLOv8 → UDP keypoints)
 - `game/` — shared Python pose code (keypoint extraction, geometry)
-- `choreography/` — `dance.json` plus the tools to build it (`extract_poses.py`, `create_choreography.py`)
+- `choreography/` — `dance.csv`/`dance.json` plus tools to build them (`extract_video.py`, `extract_poses.py`)
 - `scenes/`, `scripts/` — the Godot 4.x client
 - `test/` — `udp_client.py` to inspect the keypoint stream
-- `media/`, `weights/` — the song and the YOLOv8 pose model
+- `songs/` — drop `.mp3` songs here; they appear in the in-game recorder
+- `weights/` — the YOLOv8 pose model
 
 ## Running it
 
@@ -42,6 +43,8 @@ Run the Python commands from the repository root (with your virtualenv active) s
    then plays. The round ends when the song stops (capped at 30s for testing) and a
    winner is shown.
 
+   Or pick **Record Choreography** to author a dance live (see below).
+
 ## Choreography
 
 The choreography is a time-indexed list of pose keyframes that the game interpolates
@@ -52,10 +55,19 @@ keypoints). Two sources, loaded in this order:
   dance video. One row per frame; time = row index / fps; metadata in the top comment.
 - **`choreography/dance.json`** (fallback) — the older sparse keyposes, interpolated.
 
-To build a timeline from a dance video (record to the same song so it stays in sync):
+A timeline carries its own song in the CSV metadata (`# song=...`), so gameplay plays
+the right track; otherwise it falls back to the default song. There are two ways to make one:
 
+**Record it live in-game (easiest).** Drop `.mp3` files into `songs/`, then on the menu
+choose **Record Choreography**. Your **right hand is the cursor** — rest it on a button
+(on the right edge, far from the centre) for a moment to activate. Pick a song, press
+**Play**, get counted in, and dance; your pose is recorded and saved to
+`choreography/dance.csv` synced to that song.
+
+**Extract from a video (offline).**
 1. Put the video in a local `pose_sources/` folder (gitignored).
-2. Run `python -m choreography.extract_video --video pose_sources/dance.mp4 --fps 15`.
+2. Run `python -m choreography.extract_video --video pose_sources/dance.mp4 --fps 15 \`
+   `--song "res://songs/your-song.mp3"`.
 3. Commit the generated `choreography/dance.csv`. The video stays local.
 
 Players are scored on **limb orientation** against the best-matching reference pose within

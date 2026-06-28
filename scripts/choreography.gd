@@ -44,6 +44,8 @@ var keyframes: Array = []
 ## Resolution the reference poses were captured at, for undistorted rendering.
 var ref_width := 640.0
 var ref_height := 480.0
+## Song this choreography was recorded to (res:// path), or "" to use the default.
+var song_path := ""
 
 func load_dance() -> bool:
 	if FileAccess.file_exists(TIMELINE_CSV) and _load_csv():
@@ -95,49 +97,50 @@ func _load_csv() -> bool:
 	var f := FileAccess.open(TIMELINE_CSV, FileAccess.READ)
 	if f == null:
 		return false
+	# Parsed manually (not get_csv_line) so a song path containing commas survives
+	# in the metadata comment lines; data rows have no commas in their fields.
 	var fps := 15.0
 	var row := 0
-	while not f.eof_reached():
-		var line := f.get_csv_line()
-		if line.size() == 0 or (line.size() == 1 and line[0].strip_edges() == ""):
+	for raw in f.get_as_text().split("\n"):
+		var line := raw.strip_edges()
+		if line == "":
 			continue
-		var first := line[0].strip_edges()
-		if first.begins_with("#"):
-			fps = _parse_meta_fps(first, fps)
+		if line.begins_with("#"):
+			fps = _apply_meta(line, fps)
 			continue
-		if not first.is_valid_float():
+		var cells := line.split(",")
+		if cells.size() == 0 or not cells[0].is_valid_float():
 			continue  # column-name header row
-		keyframes.append({"time": row / fps, "pose": _row_to_pose(line)})
+		keyframes.append({"time": row / fps, "pose": _row_to_pose(cells)})
 		row += 1
 	return keyframes.size() > 0
 
-func _parse_meta_fps(meta: String, fallback: float) -> float:
-	# meta looks like: "# fps=15 width=1280 height=720"
-	for token in meta.trim_prefix("#").strip_edges().split(" ", false):
+func _apply_meta(line: String, fps: float) -> float:
+	# Either "# fps=15 width=1280 height=720" or "# song=res://songs/My Song.mp3"
+	# (song kept whole so commas/spaces in the filename are preserved).
+	var body := line.trim_prefix("#").strip_edges()
+	if body.begins_with("song="):
+		song_path = body.substr(5).strip_edges()
+		return fps
+	for token in body.split(" ", false):
 		var kv := token.split("=")
-		if kv.size() == 2:
+		if kv.size() == 2 and kv[1].is_valid_float():
 			match kv[0]:
-				"fps":
-					if kv[1].is_valid_float():
-						fallback = float(kv[1])
-				"width":
-					if kv[1].is_valid_float():
-						ref_width = float(kv[1])
-				"height":
-					if kv[1].is_valid_float():
-						ref_height = float(kv[1])
-	return fallback
+				"fps": fps = float(kv[1])
+				"width": ref_width = float(kv[1])
+				"height": ref_height = float(kv[1])
+	return fps
 
-func _row_to_pose(line: PackedStringArray) -> Dictionary:
+func _row_to_pose(cells: PackedStringArray) -> Dictionary:
 	var pose := {}
 	for k in KEYPOINT_NAMES.size():
 		var base := k * 3
-		if base + 2 >= line.size():
+		if base + 2 >= cells.size():
 			break
 		pose[KEYPOINT_NAMES[k]] = {
-			"x": int(line[base]),
-			"y": int(line[base + 1]),
-			"c": float(line[base + 2]),
+			"x": int(cells[base]),
+			"y": int(cells[base + 1]),
+			"c": float(cells[base + 2]),
 		}
 	return pose
 

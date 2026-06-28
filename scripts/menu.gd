@@ -29,6 +29,12 @@ func _ready() -> void:
 	two_btn.pressed.connect(_start.bind(2))
 	vbox.add_child(two_btn)
 
+	var record_btn := Button.new()
+	record_btn.text = "Record Choreography"
+	record_btn.custom_minimum_size = Vector2(260, 60)
+	record_btn.pressed.connect(_open_recorder)
+	vbox.add_child(record_btn)
+
 	var hint := Label.new()
 	hint.text = "Make sure vision_service.py is running. For 2 players, stand side by side."
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -38,3 +44,6 @@ func _ready() -> void:
 func _start(count: int) -> void:
 	GameState.player_count = count
 	get_tree().change_scene_to_file("res://scenes/Game.tscn")
+
+func _open_recorder() -> void:
+	get_tree().change_scene_to_file("res://scenes/Record.tscn")

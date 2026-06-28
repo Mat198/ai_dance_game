@@ -4,7 +4,7 @@ extends Node2D
 ## reference, renders the figures, shows a progress bar, and ends when the song
 ## stops (capped at MAX_DURATION for testing). Supports 1 or 2 players.
 
-const MUSIC_PATH := "res://media/Cartoon, Jéja - On & On (feat. Daniel Levi) [NCS Release].mp3"
+const DEFAULT_SONG := "res://songs/Cartoon, Jéja - On & On (feat. Daniel Levi) [NCS Release].mp3"
 
 const COUNTDOWN_SECONDS := 3.0
 ## All required players must be present this many consecutive frames before the
@@ -85,9 +85,13 @@ func _ready() -> void:
 
 	_build_progress_bar()
 
-	# Music (started once the countdown finishes).
+	# Music (started once the countdown finishes). Use the song the choreography was
+	# recorded to, if it specifies one; otherwise the default.
+	var song := DEFAULT_SONG
+	if choreo.song_path != "" and FileAccess.file_exists(choreo.song_path):
+		song = choreo.song_path
 	audio = AudioStreamPlayer.new()
-	audio.stream = load(MUSIC_PATH)
+	audio.stream = load(song)
 	audio.volume_db = linear_to_db(0.7)
 	audio.finished.connect(_end_game)
 	add_child(audio)
