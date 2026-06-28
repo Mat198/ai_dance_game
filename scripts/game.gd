@@ -90,6 +90,14 @@ func _ready() -> void:
 
 	_build_progress_bar()
 
+	# Mouse button to bail back to the main menu at any time.
+	var menu_btn := Button.new()
+	menu_btn.text = "Main Menu"
+	menu_btn.position = Vector2(PoseOverlay.WINDOW_W - 220.0, 30.0)
+	menu_btn.size = Vector2(200, 56)
+	menu_btn.pressed.connect(_on_menu_pressed)
+	add_child(menu_btn)
+
 	# Music (started once the countdown finishes). Use the song the choreography was
 	# recorded to, if it specifies one; otherwise the default.
 	var song := DEFAULT_SONG
@@ -128,6 +136,12 @@ func _update_gameplay() -> void:
 	current_time = fmod(pos, dur) if dur > 0.0 else pos
 	overlay.reference_pose = choreo.reference_pose_at(current_time)
 	overlay.queue_redraw()
+
+func _on_menu_pressed() -> void:
+	state = State.ENDED
+	if audio:
+		audio.stop()
+	get_tree().change_scene_to_file("res://scenes/Menu.tscn")
 
 func _start_playing() -> void:
 	state = State.PLAYING

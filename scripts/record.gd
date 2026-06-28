@@ -50,8 +50,22 @@ func _ready() -> void:
 	audio.volume_db = linear_to_db(0.7)
 	audio.finished.connect(_on_song_finished)
 	add_child(audio)
+
+	# Always-available mouse button to leave (the hand-cursor "Back" can be hard to
+	# hit if detection drops, so this is a reliable escape on the top-left).
+	var menu_btn := Button.new()
+	menu_btn.text = "← Menu"
+	menu_btn.position = Vector2(20, 20)
+	menu_btn.size = Vector2(180, 56)
+	menu_btn.pressed.connect(_go_to_menu)
+	add_child(menu_btn)
+
 	_load_songs()
 	_set_phase(Phase.SELECT)
+
+func _go_to_menu() -> void:
+	audio.stop()
+	get_tree().change_scene_to_file("res://scenes/Menu.tscn")
 
 func _load_songs() -> void:
 	songs.clear()
