@@ -156,7 +156,7 @@ func _start_recording() -> void:
 	last_pose = null
 	rec_width = VisionClient.source_width
 	rec_height = VisionClient.source_height
-	audio.stream = load(songs[selected]["path"])
+	audio.stream = GameState.load_mp3(songs[selected]["path"])
 	_set_phase(Phase.RECORDING)
 	audio.play()
 

@@ -96,7 +96,7 @@ func _ready() -> void:
 	if choreo.song_path != "" and FileAccess.file_exists(choreo.song_path):
 		song = choreo.song_path
 	audio = AudioStreamPlayer.new()
-	audio.stream = load(song)
+	audio.stream = GameState.load_mp3(song)
 	audio.volume_db = linear_to_db(0.7)
 	audio.finished.connect(_end_game)
 	add_child(audio)

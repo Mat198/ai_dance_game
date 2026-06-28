@@ -35,6 +35,12 @@ func _ready() -> void:
 	record_btn.pressed.connect(_open_recorder)
 	vbox.add_child(record_btn)
 
+	var quit_btn := Button.new()
+	quit_btn.text = "Quit"
+	quit_btn.custom_minimum_size = Vector2(260, 60)
+	quit_btn.pressed.connect(func(): get_tree().quit())
+	vbox.add_child(quit_btn)
+
 	var hint := Label.new()
 	hint.text = "Make sure vision_service.py is running. For 2 players, stand side by side."
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

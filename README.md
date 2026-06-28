@@ -45,6 +45,37 @@ Run the Python commands from the repository root (with your virtualenv active) s
 
    Or pick **Record Choreography** to author a dance live (see below).
 
+## Run it with one command
+
+`./run.sh` starts the Python vision sidecar and the Godot game (fullscreen), and stops
+the sidecar when you quit. It runs the project directly with a Godot binary, so the data
+folders (`songs/`, `choreography/`) stay writable — recording and dropping in new `.mp3`s
+just work. Override defaults with env vars: `GODOT_BIN`, `VENV`, `WEIGHTS`.
+
+```bash
+GODOT_BIN=/path/to/godot ./run.sh
+```
+
+### Deploy to a Jetson Orin Nano (TV setup)
+
+The game is a Godot front-end + a Python ML sidecar; on the Jetson the sidecar must use
+the GPU. Steps:
+
+1. **Flash JetPack 6.x** (gives you CUDA/cuDNN/TensorRT).
+2. **Python deps with Jetson-compatible wheels** — the default pip `torch`/`torchvision`
+   do **not** work on ARM64; install NVIDIA's prebuilt wheels, then `ultralytics` +
+   `opencv-python`. Follow the official [Ultralytics Jetson guide](https://docs.ultralytics.com/guides/nvidia-jetson/).
+   Put them in a venv (e.g. `./ai_dance_game`).
+3. **Convert the model to TensorRT once** for real-time inference:
+   `yolo export model=weights/yolov8m-pose.pt format=engine half=True`
+   (consider `yolov8s-pose`/`yolov8n-pose` for more headroom).
+4. **Get a Godot arm64 binary** for the Jetson ([Godot Linux downloads](https://godotengine.org/download/linux/)).
+5. **Run:** `GODOT_BIN=/path/to/godot.arm64 WEIGHTS=weights/yolov8m-pose.engine ./run.sh`
+
+Connect a USB webcam, HDMI to the TV (display + audio), and you're ready to play. Quit
+from the in-game **Quit** button or Ctrl-C in the terminal (the sidecar is cleaned up
+either way).
+
 ## Choreography
 
 The choreography is a time-indexed list of pose keyframes that the game interpolates
